@@ -1,5 +1,5 @@
 """
-Author: Angus Chen
+Author: Chi-An Chen
 Date: 2025-07-01
 Description:
     - Implements a feedforward neural network
