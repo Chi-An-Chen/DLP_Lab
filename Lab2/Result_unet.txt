@@ -1,0 +1,4 @@
+Dice Score: 0.92732388
+Precision : 0.95745389
+Recall    : 0.87256389
+Iou       : 0.84130586
