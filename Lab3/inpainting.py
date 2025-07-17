@@ -109,7 +109,7 @@ class MaskedImage:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="MaskGIT for Inpainting")
-    parser.add_argument('--device', type=str, default="cuda:0", help='Which device the training is on.')#cuda
+    parser.add_argument('--device', type=str, default="cpu", help='Which device the training is on.')# default="cuda:0"
     parser.add_argument('--batch-size', type=int, default=1, help='Batch size for testing.')
     parser.add_argument('--partial', type=float, default=1.0, help='Number of epochs to train (default: 50)')    
     parser.add_argument('--num_workers', type=int, default=4, help='Number of worker')
@@ -118,11 +118,11 @@ if __name__ == '__main__':
     
     
 #TODO3 step1-2: modify the path, MVTM parameters
-    parser.add_argument('--load-transformer-ckpt-path', type=str, default='transformer_checkpoints/ckpt_100.pt', help='load ckpt')
+    parser.add_argument('--load-transformer-ckpt-path', type=str, default='transformer_checkpoints/ckpt_70.pt', help='load ckpt')
     
     #dataset path
-    parser.add_argument('--test-maskedimage-path', type=str, default='./lab5_dataset/cat_face/masked_image', help='Path to testing image dataset.')
-    parser.add_argument('--test-mask-path', type=str, default='./lab5_dataset/mask64', help='Path to testing mask dataset.')
+    parser.add_argument('--test-maskedimage-path', type=str, default='./lab3_dataset/masked_image', help='Path to testing image dataset.')
+    parser.add_argument('--test-mask-path', type=str, default='./lab3_dataset/mask64', help='Path to testing mask dataset.')
     #MVTM parameter
     parser.add_argument('--sweet-spot', type=int, default=4, help='sweet spot: the best step in total iteration')
     parser.add_argument('--total-iter', type=int, default=4, help='total step for mask scheduling')
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     MaskGit_CONFIGS["model_param"]['gamma_type'] = args.mask_func
     maskgit = MaskGIT(args, MaskGit_CONFIGS)
 
-    for i, (image, mask) in enumerate(tqdm(zip(t.mi_ori, t.mask_ori))):
+    for i, (image, mask) in enumerate(tqdm(zip(t.mi_ori, t.mask_ori), total=len(t.mi_ori), desc="Inpainting")):
         image = image.to(args.device)
         mask = mask.to(args.device)
         mask_b = t.get_mask_latent(mask)

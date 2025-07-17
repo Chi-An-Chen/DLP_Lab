@@ -13,9 +13,11 @@ from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from models import MaskGit as VQGANTransformer
 from utils import LoadTrainData
+
 
 
 class TrainTransformer:
@@ -110,16 +112,16 @@ class TrainTransformer:
 
 def main():
     parser = argparse.ArgumentParser(description="Train MaskGIT Transformer")
-    parser.add_argument('--train_d_path', type=str, default="./cat_face/train/")
-    parser.add_argument('--val_d_path', type=str, default="./cat_face/val/")
+    parser.add_argument('--train_d_path', type=str, default="./lab3_dataset/train/")
+    parser.add_argument('--val_d_path', type=str, default="./lab3_dataset/val/")
     parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt')
     parser.add_argument('--device', type=str, default="cuda")
-    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--partial', type=float, default=1.0)
     parser.add_argument('--accum-grad', type=int, default=10)
 
-    parser.add_argument('--epochs', type=int, default=500)
+    parser.add_argument('--epochs', type=int, default=150)
     parser.add_argument('--save-per-epoch', type=int, default=5)
     parser.add_argument('--start-from-epoch', type=int, default=0)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
@@ -148,13 +150,16 @@ def main():
     )
 
     trainer.check_model()
-
+    writer = SummaryWriter('transformer_checkpoints/logs/')
     for epoch in range(args.start_from_epoch + 1, args.epochs + 1):
         train_loss = trainer.train_one_epoch(train_loader, epoch)
         val_loss = trainer.eval_one_epoch(val_loader, epoch)
+        
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/val', val_loss, epoch)
+        writer.add_scalar('LR', trainer.scheduler.get_last_lr()[0], epoch)
 
-        print(f"Epoch {epoch}/{args.epochs} | Train Loss: {train_loss:.4f} | "
-              f"Val Loss: {val_loss:.4f} | LR: {trainer.scheduler.get_last_lr()[0]:.6f}")
+        print(f"Epoch {epoch}/{args.epochs} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | LR: {trainer.scheduler.get_last_lr()[0]:.6f}")
 
         if epoch % args.save_per_epoch == 0:
             save_path = f"transformer_checkpoints/ckpt_{epoch}.pt"
