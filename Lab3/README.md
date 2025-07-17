@@ -20,7 +20,11 @@ python inpainting.py
 </code></pre>
 
 ## Results
+```
+FID score after training 20 epochs :
 
+FID : 29.1001
+```  
 
 
 ## TODO
