@@ -19,6 +19,10 @@ python inpainting.py
  python fid_score_gpu.py --predicted-path /path/your_inpainting_results_folder --device cuda:0
 </code></pre>
 
+## Results
+
+
+
 ## TODO
 - [x] Dataset Download 
 - [x] MaskGIT STAGE1 Training enc, codebook, dec... Pretrained Weight (./models/VQGAN/checkpoints/)
