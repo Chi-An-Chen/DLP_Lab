@@ -23,8 +23,11 @@ python inpainting.py
 FID score after training 70 epochs  
 ```
 FID : 29.1001
+```
+FID score after training 100 epochs  
+```
+FID : 27.7723
 ```  
-
 
 ## TODO
 - [x] Dataset Download 
