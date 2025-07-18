@@ -8,7 +8,7 @@ python inpainting.py
 ```
 (Make sure to edit the path for the dataset or checkpoint path etc.)
 
-## Experiment Score
+## Calculate FID Score
 ```
  cd faster-pytorch-fid
  python fid_score_gpu.py --predicted-path /path/your_inpainting_results_folder --device cuda:0
