@@ -8,11 +8,11 @@ from PIL import Image
 from tqdm import tqdm
 
 # 讀取 CSV
-df = pd.read_csv('/Users/anguschen/Downloads/lab3/faster-pytorch-fid/test_gt.csv')
+df = pd.read_csv('lab3/faster-pytorch-fid/test_gt.csv')
 print(f"Total images: {len(df)}")
 
 # 建立 ground_truth 資料夾
-save_dir = '/Users/anguschen/Downloads/lab3/Result/ground_truth'
+save_dir = 'lab3/Result/ground_truth'
 os.makedirs(save_dir, exist_ok=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
