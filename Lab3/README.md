@@ -19,9 +19,9 @@ FID score after training 70 epochs
 ```
 FID : 29.1001
 ```
-FID score after training 100 epochs  
+FID score after training 200 epochs  
 ```
-FID : 27.7723
+FID : 28.7192
 ```  
 
 ## TODO
