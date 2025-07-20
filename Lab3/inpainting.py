@@ -126,8 +126,8 @@ if __name__ == '__main__':
     parser.add_argument('--test-maskedimage-path', type=str, default='./lab3_dataset/masked_image', help='Path to testing image dataset.')
     parser.add_argument('--test-mask-path'       , type=str, default='./lab3_dataset/mask64', help='Path to testing mask dataset.')
     #MVTM parameter
-    parser.add_argument('--sweet-spot', type=int, default=4       , help='sweet spot: the best step in total iteration')
-    parser.add_argument('--total-iter', type=int, default=4       , help='total step for mask scheduling')
+    parser.add_argument('--sweet-spot', type=int, default=10      , help='sweet spot: the best step in total iteration')
+    parser.add_argument('--total-iter', type=int, default=10      , help='total step for mask scheduling')
     parser.add_argument('--mask-func' , type=str, default='cosine', help='mask scheduling function')
 
     args = parser.parse_args()
