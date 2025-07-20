@@ -26,14 +26,3 @@ FID score after training 200 epochs
 ```
 FID : 28.7192
 ```  
-
-## TODO
-- [x] Dataset Download 
-- [x] MaskGIT STAGE1 Training enc, codebook, dec... Pretrained Weight (./models/VQGAN/checkpoints/)
-- [x] MultiHeadAttetion forward (./models/Transformer/modules/layers.py class MultiHeadAttetion)
-- [x] MaskGIT STAGE2 Training Transformer (./training_transformer.py ./models/VQGAN_Transformer.py)
-- [x] Implement functions for inpainting (./inpainting.py ./models/VQGAN_Transformer.py)
-- [x] Experiment Score
-
-  
-
