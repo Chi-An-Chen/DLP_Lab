@@ -1,9 +1,12 @@
 # Lab3 MaskGIT for Image Inpainting
 
 ## Run the code
-
+Train:  
 ```
 python training_transformer.py
+```
+Inference:  
+```
 python inpainting.py
 ```
 (Make sure to edit the path for the dataset or checkpoint path etc.)
