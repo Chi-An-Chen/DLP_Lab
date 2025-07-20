@@ -4,7 +4,6 @@
 ```
 python main.py
 ```
-(Make sure to edit the path for the dataset or checkpoint path etc.)
 
 ## Results
 XOR dataset:    
