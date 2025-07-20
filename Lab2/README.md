@@ -3,26 +3,27 @@
 ## Run the code
 Train:  
 ```
-python training_transformer.py
+python train.py
 ```
-Inference:  
+Inference and evaluate:  
 ```
-python inpainting.py
+python inference.py
 ```
 (Make sure to edit the path for the dataset or checkpoint path etc.)
 
-## Calculate FID Score
+## Results
+U-Net:  
 ```
- cd faster-pytorch-fid
- python fid_score_gpu.py --predicted-path /path/your_inpainting_results_folder --device cuda:0
+Dice Score: 0.92732388
+Precision : 0.95745389
+Recall    : 0.87256389
+Iou       : 0.84130586
 ```
 
-## Results
-FID score after training 70 epochs  
+ResNet34 & U-Net:  
 ```
-FID : 29.1001
-```
-FID score after training 200 epochs  
-```
-FID : 28.7192
+Dice Score: 0.95062172
+Precision : 0.93265456
+Recall    : 0.90897565
+Iou       : 0.85317023
 ```  
