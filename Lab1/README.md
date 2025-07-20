@@ -1,28 +1,20 @@
-# Lab3 MaskGIT for Image Inpainting
+# Lab1
 
-## Run the code
-Train:  
+## Run the code  
 ```
-python training_transformer.py
-```
-Inference:  
-```
-python inpainting.py
+python main.py
 ```
 (Make sure to edit the path for the dataset or checkpoint path etc.)
 
-## Calculate FID Score
+## Results
+XOR dataset:    
 ```
- cd faster-pytorch-fid
- python fid_score_gpu.py --predicted-path /path/your_inpainting_results_folder --device cuda:0
+Epoch    :  100000
+Accuracy : 100.000%
 ```
 
-## Results
-FID score after training 70 epochs  
+Linear dataset:  
 ```
-FID : 29.1001
+Epoch    : 100000
+Accuracy : 99.000%
 ```
-FID score after training 200 epochs  
-```
-FID : 28.7192
-```  
