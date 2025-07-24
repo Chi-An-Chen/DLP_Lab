@@ -1,6 +1,10 @@
 # NYCU - DLP 2025 Summer
 
-## TODO
-- [x] Lab1 - (2025/07/01)  
-- [x] Lab2 - (2025/07/10)  
-- [x] Lab3 - (2025/07/17)  
+## Search & Response Using ChatGPT 
+```
+Main_GPT_QA/000_GPT_QA.py --keyword [School Name] 
+```
+If you want to save the response of GPT
+```
+Main_GPT_QA/000_GPT_QA.py --keyword [School Name] --save2txt
+```
