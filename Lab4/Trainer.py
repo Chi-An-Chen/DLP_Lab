@@ -248,7 +248,6 @@ class VAE_Model(nn.Module):
             parm = self.Decoder_Fusion(last_human_feat_hat, label_feat, z)
             out = self.Generator(parm)
 
-            # MSE += self.mse_criterion(img[i], out)
             MSE += self.l1_criterion(img[i], out)
             KLD += kl_criterion(mu, logvar, self.train_vi_len)
 
@@ -275,7 +274,7 @@ class VAE_Model(nn.Module):
             out = self.Generator(parm)
 
             # 計算重建誤差
-            MSE += self.mse_criterion(img[i], out)
+            MSE += self.l1_criterion(img[i], out)
 
             decoded_frame_list.append(out.cpu())
             label_list.append(img[i].cpu())
