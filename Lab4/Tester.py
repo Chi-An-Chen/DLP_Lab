@@ -143,7 +143,7 @@ class Test_model(VAE_Model):
         out = img[0]
         
         for i in range(1, self.val_vi_len):
-            z = torch.cuda.FloatTensor(1, self.args.N_dim, self.args.frame_H, self.args.frame_W).normal_()
+            z = torch.empty(1, self.args.N_dim, self.args.frame_H, self.args.frame_W, dtype=torch.float32, device='cuda').normal_()
             label_feat = self.label_transformation(label[i])
             human_feat_hat = self.frame_transformation(out)
             
@@ -189,7 +189,7 @@ class Test_model(VAE_Model):
 
     def load_checkpoint(self):
         if self.args.ckpt_path != None:
-            checkpoint = torch.load(self.args.ckpt_path)
+            checkpoint = torch.load(self.args.ckpt_path, weights_only=True)
             self.load_state_dict(checkpoint['state_dict'], strict=True) 
 
 
