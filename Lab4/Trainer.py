@@ -22,7 +22,7 @@ from torchvision import transforms
 from dataloader import Dataset_Dance
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
-from modules import Generator, Gaussian_Predictor, Decoder_Fusion, Label_Encoder, RGB_Encoder
+from modules import ProgressiveGenerator, EnhancedGaussianPredictor, EnhancedDecoderFusion, EnhancedLabel_Encoder, EnhancedRGB_Encoder
 
 # Set environment variable to avoid KMP_DUPLICATE_LIB_OK error
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
@@ -110,15 +110,20 @@ class VAE_Model(nn.Module):
         self.args = args
         
         # Modules to transform image from RGB-domain to feature-domain
-        self.frame_transformation = RGB_Encoder(3, args.F_dim)
-        self.label_transformation = Label_Encoder(3, args.L_dim)
+        self.frame_transformation = EnhancedRGB_Encoder(3, args.F_dim)
+        self.label_transformation = EnhancedLabel_Encoder(3, args.L_dim)
         
         # Conduct Posterior prediction in Encoder
-        self.Gaussian_Predictor   = Gaussian_Predictor(args.F_dim + args.L_dim, args.N_dim)
-        self.Decoder_Fusion       = Decoder_Fusion(args.F_dim + args.L_dim + args.N_dim, args.D_out_dim)
+        self.Gaussian_Predictor   = EnhancedGaussianPredictor(args.F_dim + args.L_dim, args.N_dim)
+        self.Decoder_Fusion = EnhancedDecoderFusion(
+            img_channels=args.F_dim,
+            label_channels=args.L_dim,
+            z_channels=args.N_dim,
+            out_channels=args.D_out_dim
+        )
         
         # Generative model
-        self.Generator            = Generator(input_nc=args.D_out_dim, output_nc=3)
+        self.Generator            = ProgressiveGenerator(input_nc=args.D_out_dim, output_nc=3)
         
         self.optim = optim.AdamW(self.parameters(), lr=self.args.lr, betas=(0.9, 0.95))
 
@@ -132,7 +137,7 @@ class VAE_Model(nn.Module):
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optim, lr_schedule)
 
         self.kl_annealing = kl_annealing(args, current_epoch=0)
-        # self.mse_criterion = nn.MSELoss()
+        self.mse_criterion = nn.MSELoss()
         self.l1_criterion = nn.L1Loss()
         self.current_epoch = 0
         
@@ -230,9 +235,8 @@ class VAE_Model(nn.Module):
         return avg_loss
     
     def training_one_step(self, img, label, adapt_TeacherForcing):
-        # TODO
-        img = img.permute(1, 0, 2, 3, 4) # change tensor into (seq, B, C, H, W)
-        label = label.permute(1, 0, 2, 3, 4) # change tensor into (seq, B, C, H, W)
+        img = img.permute(1, 0, 2, 3, 4)
+        label = label.permute(1, 0, 2, 3, 4)
 
         MSE = 0
         KLD = 0
@@ -240,42 +244,47 @@ class VAE_Model(nn.Module):
         for i in range(1, self.train_vi_len):
             label_feat = self.label_transformation(label[i])
             human_feat_hat = self.frame_transformation(img[i])
-            z, mu, logvar = self.Gaussian_Predictor(human_feat_hat, label_feat)
+            
+            z, mu, logvar, kl_loss = self.Gaussian_Predictor(human_feat_hat, label_feat)
+            
             if adapt_TeacherForcing:
                 last_human_feat_hat = self.frame_transformation(img[i-1])
             else:
                 last_human_feat_hat = self.frame_transformation(img[0] if i==1 else out)
+                
             parm = self.Decoder_Fusion(last_human_feat_hat, label_feat, z)
             out = self.Generator(parm)
-
-            MSE += self.l1_criterion(img[i], out)
-            KLD += kl_criterion(mu, logvar, self.train_vi_len)
+            l1 = self.l1_criterion(img[i], out)
+            mse = self.mse_criterion(img[i], out)
+            MSE += 0.5 * l1 + 0.5 * mse
+            KLD += kl_loss
 
         return MSE, KLD
     
     def val_one_step(self, img, label):
-        # TODO
-        img = img.permute(1, 0, 2, 3, 4) # change tensor into (seq, B, C, H, W)
-        label = label.permute(1, 0, 2, 3, 4) # change tensor into (seq, B, C, H, W)
+        img = img.permute(1, 0, 2, 3, 4)
+        label = label.permute(1, 0, 2, 3, 4)
 
         decoded_frame_list = [img[0].cpu()]
         label_list = []
         out = img[0]
 
-        # 計算validation loss 
         MSE = 0
         
         for i in range(1, self.val_vi_len):
             label_feat = self.label_transformation(label[i])
             human_feat_hat = self.frame_transformation(out)
-            z = torch.empty(1, self.args.N_dim, self.args.frame_H, self.args.frame_W, dtype=torch.float32, device='cuda').normal_()
+            
+            # 在validation時可以不使用學習到的分佈，直接採樣
+            z = torch.empty(1, self.args.N_dim, self.args.frame_H, self.args.frame_W, 
+                        dtype=torch.float32, device='cuda').normal_()
             
             parm = self.Decoder_Fusion(human_feat_hat, label_feat, z)    
             out = self.Generator(parm)
 
-            # 計算重建誤差
-            MSE += self.l1_criterion(img[i], out)
-
+            l1 = self.l1_criterion(img[i], out)
+            mse = self.mse_criterion(img[i], out)
+            MSE += 0.5 * l1 + 0.5 * mse
             decoded_frame_list.append(out.cpu())
             label_list.append(img[i].cpu())
 
@@ -389,19 +398,19 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument('--batch_size',    type=int,    default=8)
+    parser.add_argument('--batch_size',    type=int,    default=4)
     parser.add_argument('--lr',            type=float,  default=1e-4,     help="initial learning rate")
-    parser.add_argument('--device',        type=str, choices=["cuda", "cpu"], default="cuda")
+    parser.add_argument('--device',        type=str, choices=["cuda", "cpu"],   default="cuda")
     parser.add_argument('--optim',         type=str, choices=["Adam", "AdamW"], default="AdamW")
     parser.add_argument('--gpu',           type=int, default=1)
     parser.add_argument('--test',          action='store_true')
     parser.add_argument('--store_visualization',      action='store_true', help="If you want to see the result while training")
     parser.add_argument('--DR',            type=str, required=True,  help="Your Dataset Path")
     parser.add_argument('--save_root',     type=str, required=True,  help="The path to save your data")
-    parser.add_argument('--warmup_steps',  type=int, default=15)
+    parser.add_argument('--warmup_steps',  type=int, default=7)
     parser.add_argument('--num_workers',   type=int, default=4)
-    parser.add_argument('--num_epoch',     type=int, default=300,     help="number of total epoch")
-    parser.add_argument('--per_save',      type=int, default=10,      help="Save checkpoint every seted epoch")
+    parser.add_argument('--num_epoch',     type=int, default=150,    help="number of total epoch")
+    parser.add_argument('--per_save',      type=int, default=5,      help="Save checkpoint every seted epoch")
     parser.add_argument('--partial',       type=float, default=1.0,  help="Part of the training dataset to be trained")
     parser.add_argument('--train_vi_len',  type=int, default=16,     help="Training video length")
     parser.add_argument('--val_vi_len',    type=int, default=630,    help="valdation video length")
@@ -410,16 +419,16 @@ if __name__ == '__main__':
     
     
     # Module parameters setting
-    parser.add_argument('--F_dim',         type=int, default=128,    help="Dimension of feature human frame")
-    parser.add_argument('--L_dim',         type=int, default=32,     help="Dimension of feature label frame")
-    parser.add_argument('--N_dim',         type=int, default=12,     help="Dimension of the Noise")
-    parser.add_argument('--D_out_dim',     type=int, default=192,    help="Dimension of the output in Decoder_Fusion")
+    parser.add_argument('--F_dim',         type=int, default=160,    help="Dimension of feature human frame")
+    parser.add_argument('--L_dim',         type=int, default=64,     help="Dimension of feature label frame") # 32
+    parser.add_argument('--N_dim',         type=int, default=64,     help="Dimension of the Noise") # 12
+    parser.add_argument('--D_out_dim',     type=int, default=288,    help="Dimension of the output in Decoder_Fusion")
     
     # Teacher Forcing strategy
-    parser.add_argument('--tfr',           type=float, default=1.0,  help="The initial teacher forcing ratio")
+    parser.add_argument('--tfr',           type=float, default=0.0,  help="The initial teacher forcing ratio")
     parser.add_argument('--tfr_sde',       type=int,   default=10,   help="The epoch that teacher forcing ratio start to decay")
     parser.add_argument('--tfr_d_step',    type=float, default=0.1,  help="Decay step that teacher forcing ratio adopted")
-    parser.add_argument('--ckpt_path',     type=str,    default=None,help="The path of your checkpoints")   
+    parser.add_argument('--ckpt_path',     type=str,   default=None, help="The path of your checkpoints")   
     
     # Training Strategy
     parser.add_argument('--fast_train',         action='store_true')
@@ -427,9 +436,9 @@ if __name__ == '__main__':
     parser.add_argument('--fast_train_epoch',   type=int, default=5,        help="Number of epoch to use fast train mode")
     
     # Kl annealing stratedy arguments
-    parser.add_argument('--kl_anneal_type',     type=str, default='No',       help="")
-    parser.add_argument('--kl_anneal_cycle',    type=int, default=10,               help="")
-    parser.add_argument('--kl_anneal_ratio',    type=float, default=1,              help="")
+    parser.add_argument('--kl_anneal_type',     type=str,   default='No', help="")
+    parser.add_argument('--kl_anneal_cycle',    type=int,   default=10,   help="")
+    parser.add_argument('--kl_anneal_ratio',    type=float, default=1,    help="")
     
 
     
@@ -437,3 +446,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     main(args)
+    
