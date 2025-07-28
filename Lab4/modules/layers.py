@@ -5,6 +5,7 @@ Description: VAE layers in modules
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class AdaptiveSEBlock(nn.Module):
@@ -32,32 +33,63 @@ class AdaptiveSEBlock(nn.Module):
         return x * y.expand_as(x)
 
 
-class ResidualBlock(nn.Module):
+class SpatialAttention(nn.Module):
+    def __init__(self, channels):
+        super().__init__()
+        self.conv = nn.Conv2d(2, 1, 7, padding=3)
+        
+    def forward(self, x):
+        avg_pool = torch.mean(x, dim=1, keepdim=True)
+        max_pool = torch.max(x, dim=1, keepdim=True)[0]
+        attention = torch.cat([avg_pool, max_pool], dim=1)
+        attention = torch.sigmoid(self.conv(attention))
+        return x * attention
+
+
+class SafeGroupNorm(nn.Module):
+    """安全的GroupNorm，自動處理通道數不整除的情況"""
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True):
+        super().__init__()
+        
+        for groups in range(min(num_groups, num_channels), 0, -1):
+            if num_channels % groups == 0:
+                self.norm = nn.GroupNorm(groups, num_channels, eps, affine)
+                break
+        else:
+            print(f"Warning: Using BatchNorm instead of GroupNorm for {num_channels} channels")
+            self.norm = nn.BatchNorm2d(num_channels, eps=eps, affine=affine)
+    
+    def forward(self, x):
+        return self.norm(x)
+class EnhancedResidualBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int, stride=1):
         super().__init__()
         
         self.conv1 = nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=stride, padding=1)
-        self.leaky_relu = nn.LeakyReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=stride, padding=1)
-        if in_ch != out_ch:
-            self.skip = nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=stride)
+        self.bn1 = SafeGroupNorm(8, out_ch)  # 使用SafeGroupNorm
+        self.conv2 = nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1)
+        self.bn2 = SafeGroupNorm(8, out_ch)
+        
+        if in_ch != out_ch or stride != 1:
+            self.skip = nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, 1, stride),
+                SafeGroupNorm(8, out_ch)
+            )
         else:
             self.skip = None
+            
         self.se = AdaptiveSEBlock(out_ch)
-
+            
     def forward(self, x):
         identity = x
-        out = self.conv1(x)
-        out = self.leaky_relu(out)
-        out = self.conv2(out)
-        out = self.leaky_relu(out)
+        out = F.gelu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        
         out = self.se(out)
         
         if self.skip is not None:
             identity = self.skip(x)
-
-        out = out + identity
-        return out
+        return F.gelu(out + identity)
 
 
 class DepthConvBlock(nn.Module):
