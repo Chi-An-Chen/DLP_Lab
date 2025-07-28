@@ -15,5 +15,5 @@ python Tester.py --DR [Dataset dir] --save_root [Testing results dir] --ckpt_pat
 ## Results
 ```
 Average PSNR :
-35.383
+38.120
 ```
