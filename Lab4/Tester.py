@@ -22,17 +22,7 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from torch.utils.data import Dataset as torchData
 from torchvision.datasets.folder import default_loader as imgloader
-from modules import Generator, Gaussian_Predictor, Decoder_Fusion, Label_Encoder, RGB_Encoder
-
-
-TA_ = """
- ██████╗ ██████╗ ███╗   ██╗ ██████╗ ██████╗  █████╗ ████████╗██╗   ██╗██╗      █████╗ ████████╗██╗ ██████╗ ███╗   ██╗███████╗    ██╗██╗██╗
-██╔════╝██╔═══██╗████╗  ██║██╔════╝ ██╔══██╗██╔══██╗╚══██╔══╝██║   ██║██║     ██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║██╔════╝    ██║██║██║
-██║     ██║   ██║██╔██╗ ██║██║  ███╗██████╔╝███████║   ██║   ██║   ██║██║     ███████║   ██║   ██║██║   ██║██╔██╗ ██║███████╗    ██║██║██║
-██║     ██║   ██║██║╚██╗██║██║   ██║██╔══██╗██╔══██║   ██║   ██║   ██║██║     ██╔══██║   ██║   ██║██║   ██║██║╚██╗██║╚════██║    ╚═╝╚═╝╚═╝
-╚██████╗╚██████╔╝██║ ╚████║╚██████╔╝██║  ██║██║  ██║   ██║   ╚██████╔╝███████╗██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║███████║    ██╗██╗██╗
- ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝    ╚═╝╚═╝╚═╝                                                                                                                          
-"""
+from modules import ProgressiveGenerator, EnhancedGaussianPredictor, EnhancedDecoderFusion, EnhancedLabel_Encoder, EnhancedRGB_Encoder
 
 def Generate_PSNR(imgs1, imgs2, data_range=1.):
     """PSNR for torch tensor"""
@@ -87,14 +77,19 @@ class Test_model(VAE_Model):
         self.args = args
         
         # Modules to transform image from RGB-domain to feature-domain
-        self.frame_transformation = RGB_Encoder(3, args.F_dim)
-        self.label_transformation = Label_Encoder(3, args.L_dim)
+        self.frame_transformation = EnhancedRGB_Encoder(3, args.F_dim)
+        self.label_transformation = EnhancedLabel_Encoder(3, args.L_dim)
         
         # Conduct Posterior prediction in Encoder
-        self.Gaussian_Predictor   = Gaussian_Predictor(args.F_dim + args.L_dim, args.N_dim)
-        self.Decoder_Fusion       = Decoder_Fusion(args.F_dim + args.L_dim + args.N_dim, args.D_out_dim)
+        self.Gaussian_Predictor   = EnhancedGaussianPredictor(args.F_dim + args.L_dim, args.N_dim)
+        self.Decoder_Fusion = EnhancedDecoderFusion(
+            img_channels=args.F_dim,
+            label_channels=args.L_dim,
+            z_channels=args.N_dim,
+            out_channels=args.D_out_dim
+        )
         
-        self.Generator            = Generator(input_nc=args.D_out_dim, output_nc=3)
+        self.Generator            = ProgressiveGenerator(input_nc=args.D_out_dim, output_nc=3)
         
         self.mse_criterion = nn.MSELoss()
         self.current_epoch = 0
@@ -130,14 +125,9 @@ class Test_model(VAE_Model):
         assert label.shape[0] == 630, "Testing pose seqence should be 630"
         assert img.shape[0] == 1, "Testing video seqence should be 1"
         
-        # decoded_frame_list is used to store the predicted frame seq
-        # label_list is used to store the label seq
-        # Both list will be used to make gif
         decoded_frame_list = [img[0].cpu()]
         label_list = []
-
-        # TODO
-        # Normal normal
+     
         last_human_feat = self.frame_transformation(img[0])
         first_templete = last_human_feat.clone()
         out = img[0]
@@ -223,10 +213,10 @@ if __name__ == '__main__':
     
     
     # Module parameters setting
-    parser.add_argument('--F_dim',         type=int, default=128,    help="Dimension of feature human frame")
-    parser.add_argument('--L_dim',         type=int, default=32,     help="Dimension of feature label frame")
-    parser.add_argument('--N_dim',         type=int, default=12,     help="Dimension of the Noise")
-    parser.add_argument('--D_out_dim',     type=int, default=192,    help="Dimension of the output in Decoder_Fusion")
+    parser.add_argument('--F_dim',         type=int, default=160,    help="Dimension of feature human frame")
+    parser.add_argument('--L_dim',         type=int, default=64,     help="Dimension of feature label frame")
+    parser.add_argument('--N_dim',         type=int, default=64,     help="Dimension of the Noise")
+    parser.add_argument('--D_out_dim',     type=int, default=288,    help="Dimension of the output in Decoder_Fusion")
     
     # Teacher Forcing strategy
     parser.add_argument('--tfr',           type=float, default=1.0,  help="The initial teacher forcing ratio")
