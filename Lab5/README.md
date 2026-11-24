@@ -1,9 +1,11 @@
 # Lab 5
 
+Work from `Lab5/`. Select the same environment and model variants for training and evaluation; evaluation requires a checkpoint from that run.
+
 ## Training
 Train:  
 ```
-python enhanced_dqn.py
+python DQN.py
 ```
 ```
 --env (CartPole-v1 or ALE/Pong-v5)
@@ -19,7 +21,7 @@ python enhanced_dqn.py
 python test_model.py
 ```
 ```
---model-path best_model.pt
+--model-path /path/to/checkpoint.pt
 --env (CartPole-v1 or ALE/Pong-v5)
 --output-dir ./eval_results
 --save-video
