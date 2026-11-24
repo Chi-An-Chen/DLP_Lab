@@ -22,7 +22,7 @@ python test_model.py
 ```
 ```
 --model-path /path/to/checkpoint.pt
---env (CartPole-v1 or ALE/Pong-v5)
+--env-name (CartPole-v1 or ALE/Pong-v5)
 --output-dir ./eval_results
 --save-video
 ```

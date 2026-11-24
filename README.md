@@ -7,3 +7,5 @@
 - [x] [Lab 3 — MaskGIT image inpainting](Lab3/README.md) (2025/07/17)
 - [x] [Lab 4 — Dance video prediction](Lab4/README.md) (2025/07/26)
 - [x] [Lab 5 — Deep Q-learning](Lab5/README.md) (2025/08/02)
+
+To evaluate an existing Lab 5 model, use the [checkpoint handoff](Lab5/CHECKPOINT_HANDOFF.md).
