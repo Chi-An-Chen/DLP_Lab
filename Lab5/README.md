@@ -17,12 +17,11 @@ python DQN.py
 (Make sure to edit the path for the dataset or checkpoint path etc.)
 
 ## Testing
+
+From `Lab5/`, evaluate a saved CartPole checkpoint and write videos to `eval_results/`:
+
+```bash
+python test_model.py --model-path ./enhanced_results/best_model.pt --env-name CartPole-v1 --output-dir ./eval_results --save-video
 ```
-python test_model.py
-```
-```
---model-path /path/to/checkpoint.pt
---env-name (CartPole-v1 or ALE/Pong-v5)
---output-dir ./eval_results
---save-video
-```
+
+Use the checkpoint file from your own run. For a Pong checkpoint, set `--env-name ALE/Pong-v5`. See the [checkpoint handoff](CHECKPOINT_HANDOFF.md) for the training and evaluation paths.
